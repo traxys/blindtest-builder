@@ -1,0 +1,27 @@
+[package]
+name = "blindtest-builder"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.40"
+iced = { version = "0.3.0", features = ["image"] }
+iced_aw = { git = "https://github.com/iced-rs/iced_aw", branch = "main", default-features = false, features = ["modal", "colors", "card"] }
+iced_wgpu = "0.4.0"
+iced_winit = "0.3.0"
+native-dialog = "0.5.5"
+rodio = "0.14.0"
+serde = { version = "1.0.126", features = ["derive"] }
+serde_json = "1.0.64"
+
+[patch.crates-io]
+iced = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+iced_native = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+iced_futures = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+iced_graphics = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+iced_core = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+iced_wgpu = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+iced_winit = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+#iced_glow = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
