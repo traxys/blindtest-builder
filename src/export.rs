@@ -69,6 +69,8 @@ pub(crate) fn export(
             .arg(&looping_duration)
             .arg("-i")
             .arg(&clip_data.image_path)
+            .arg("-ss")
+            .arg(clip_data.offset.as_secs().to_string())
             .arg("-t")
             .arg(&clip_duration)
             .arg("-i")

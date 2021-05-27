@@ -31,6 +31,7 @@ pub(crate) struct Clip {
     music_path: PathBuf,
     image_path: PathBuf,
     offset: Duration,
+    duration: Duration,
 }
 
 impl Clip {
@@ -53,7 +54,19 @@ impl Clip {
             music,
             music_path: clip.music_path,
             offset: clip.offset,
-        })
+            duration: Default::default(),
+        }
+        .fetch_duration())
+    }
+
+    pub(crate) fn fetch_duration(self) -> Self {
+        Self {
+            duration: Decoder::new(Cursor::new(self.music.as_ref()))
+                .expect("could not load clip")
+                .total_duration()
+                .expect("clip has no duration"),
+            ..self
+        }
     }
 
     fn audio(&self, duration: u32) -> Result<impl Source<Item = i16>, String> {

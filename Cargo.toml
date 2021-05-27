@@ -24,4 +24,5 @@ iced_graphics = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-
 iced_core = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
 iced_wgpu = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
 iced_winit = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }
+rodio = { git = "https://github.com/traxys/rodio", branch = "fixed_take"}
 #iced_glow = { git = "https://github.com/traxys/iced", branch = "revert-wgpu-0.7" }

@@ -89,7 +89,9 @@ impl ClipBuilderState {
             image,
             image_path,
             offset: Duration::from_secs(0),
-        })
+            duration: Duration::from_secs(0),
+        }
+        .fetch_duration())
     }
 
     pub(crate) fn view(&mut self) -> (String, Element<Message>, Message) {

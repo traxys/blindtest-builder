@@ -2386,8 +2386,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 [[package]]
 name = "rodio"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d98f5e557b61525057e2bc142c8cd7f0e70d75dc32852309bec440e6e046bf9"
+source = "git+https://github.com/traxys/rodio?branch=fixed_take#682bb6439850fe96b77adcc99d618fb9e894ad3f"
 dependencies = [
  "claxon",
  "cpal",
