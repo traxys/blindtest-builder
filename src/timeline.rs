@@ -3,10 +3,9 @@ use iced::{
     button, pick_list, scrollable, Button, Column, Command, Container, Element, Image, Length,
     PickList, Row, Rule, Scrollable, Space, Text,
 };
-use rodio::{Decoder, OutputStreamHandle, Sink};
+use rodio::{OutputStreamHandle, Sink};
 use std::{
     collections::{HashMap, VecDeque},
-    io::Cursor,
     iter::FromIterator,
     path::PathBuf,
 };
@@ -95,6 +94,7 @@ impl TimelineClip {
         &mut self,
         msg: TimelineClipMessage,
         clip: Option<&Clip>,
+        duration: u32,
         stream_handle: &OutputStreamHandle,
     ) -> (Command<Message>, Option<TimelineAction>) {
         match msg {
@@ -103,7 +103,7 @@ impl TimelineClip {
             TimelineClipMessage::Action(a) => return (Command::none(), Some(a)),
             TimelineClipMessage::Play => {
                 let clip = clip.expect("clip must be present in this command");
-                match Decoder::new(Cursor::new(clip.music.as_ref().clone())) {
+                match clip.audio(duration) {
                     Ok(a) => self.sink.append(a),
                     Err(e) => eprintln!("Could not decode audio: {:?}", e),
                 };
@@ -267,11 +267,11 @@ pub(crate) struct Timeline {
 }
 
 impl Timeline {
-    fn play_all(&self, clips: &HashMap<String, Clip>) {
+    fn play_all(&self, clips: &HashMap<String, Clip>, duration: u32) {
         for clip in &self.clips {
             if let Some(clip) = &clip.clip {
                 let clip_data = clips.get(clip).expect("clip not present");
-                match Decoder::new(Cursor::new(clip_data.music.as_ref().clone())) {
+                match clip_data.audio(duration) {
                     Ok(a) => self.sink.append(a),
                     Err(e) => eprintln!("Could not decode audio: {:?}", e),
                 };
@@ -313,6 +313,7 @@ impl Timeline {
         message: TimelineMessage,
         clips: &HashMap<String, Clip>,
         stream_handle: &OutputStreamHandle,
+        duration: u32,
         export: E,
     ) -> Command<Message> {
         match message {
@@ -323,7 +324,7 @@ impl Timeline {
                     .clip
                     .as_ref()
                     .map(|clip| clips.get(clip).expect("clip not present"));
-                let (cmd, action) = self.clips[index].update(msg, clip, stream_handle);
+                let (cmd, action) = self.clips[index].update(msg, clip, duration, stream_handle);
                 if let Some(action) = action {
                     match action {
                         TimelineAction::Up => self.clips.swap(index, index - 1),
@@ -336,7 +337,7 @@ impl Timeline {
                 return cmd;
             }
             TimelineMessage::Play => {
-                self.play_all(clips);
+                self.play_all(clips, duration);
                 self.playing = true;
             }
             TimelineMessage::Stop => {

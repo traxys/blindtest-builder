@@ -1,11 +1,8 @@
-use std::{collections::HashMap, io::Cursor};
-
-use iced::{Button, Column, Command, Element, Image, Text, button};
-use rodio::{Decoder, OutputStreamHandle, Sink};
-
-use crate::{Clip, Message, style};
-
 use super::ModalMessage;
+use crate::{style, Clip, Message};
+use iced::{button, Button, Column, Command, Element, Image, Text};
+use rodio::{OutputStreamHandle, Sink};
+use std::collections::HashMap;
 
 pub(crate) struct ClipEditorState {
     clip: String,
@@ -35,13 +32,14 @@ impl ClipEditorState {
         &mut self,
         message: ClipEditorMessage,
         stream_handle: &OutputStreamHandle,
+        duration: u32,
         clips: &mut HashMap<String, crate::Clip>,
     ) -> (Command<Message>, bool) {
         let clip = clips.get(&self.clip).expect("clip was deleted somehow");
 
         match message {
             ClipEditorMessage::PlayClip => {
-                match Decoder::new(Cursor::new(clip.music.as_ref().clone())) {
+                match clip.audio(duration) {
                     Ok(a) => self.sink.append(a),
                     Err(e) => eprintln!("Could not decode audio: {:?}", e),
                 };
@@ -80,7 +78,8 @@ impl ClipEditorState {
             ClipEditorMessage::PlayClip.into()
         });
 
-        let content = Column::new().spacing(5)
+        let content = Column::new()
+            .spacing(5)
             .push(Image::new(clip.image.clone()))
             .push(audio_button)
             .push(
@@ -110,4 +109,3 @@ impl From<ClipEditorMessage> for Message {
         Message::Modal(ModalMessage::ClipEditor(m))
     }
 }
-

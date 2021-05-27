@@ -2,7 +2,7 @@ use crate::{style, Clip, Message};
 use iced::{
     button, text_input, Button, Color, Column, Command, Container, Element, Row, Text, TextInput,
 };
-use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 
 #[derive(Clone, Debug)]
 pub enum ClipBuilderMessage {
@@ -88,6 +88,7 @@ impl ClipBuilderState {
             music_path,
             image,
             image_path,
+            offset: Duration::from_secs(0),
         })
     }
 

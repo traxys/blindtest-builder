@@ -4,8 +4,10 @@ use iced::{
 };
 use iced_aw::{modal, Modal};
 use modals::{ModalInnerState, ModalMessage};
-use rodio::{OutputStream, OutputStreamHandle};
-use std::{collections::HashMap, iter::FromIterator, path::PathBuf, sync::Arc};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Source};
+use std::{
+    collections::HashMap, io::Cursor, iter::FromIterator, path::PathBuf, sync::Arc, time::Duration,
+};
 
 mod export;
 mod modals;
@@ -28,6 +30,7 @@ pub(crate) struct Clip {
     image: image::Handle,
     music_path: PathBuf,
     image_path: PathBuf,
+    offset: Duration,
 }
 
 impl Clip {
@@ -36,6 +39,7 @@ impl Clip {
             title: self.title.clone(),
             music_path: self.music_path.clone(),
             image_path: self.image_path.clone(),
+            offset: self.offset.clone(),
         }
     }
 
@@ -48,7 +52,15 @@ impl Clip {
             image_path: clip.image_path,
             music,
             music_path: clip.music_path,
+            offset: clip.offset,
         })
+    }
+
+    fn audio(&self, duration: u32) -> Result<impl Source<Item = i16>, String> {
+        Ok(Decoder::new(Cursor::new(self.music.as_ref().clone()))
+            .map_err(|e| format!("Error reading music: {}", e))?
+            .skip_duration(self.offset)
+            .take_duration(Duration::from_secs(duration as u64)))
     }
 }
 
@@ -124,7 +136,7 @@ impl BlindTestBuilder {
                 cb.update(c, &mut self.clips)
             }
             (ModalMessage::ClipEditor(c), ModalInnerState::ClipEditor(ce)) => {
-                ce.update(c, &self.stream_handle, &mut self.clips)
+                ce.update(c, &self.stream_handle, self.clip_duration, &mut self.clips)
             }
             (ModalMessage::GlobalSettings(m), ModalInnerState::GlobalSettings(g)) => {
                 g.update(m, |settings| {
@@ -355,14 +367,18 @@ impl Application for BlindTestBuilder {
             },
             Message::SaveTo(None) | Message::LoadFrom(None) => {}
             Message::Timeline(m) => {
-                return timeline.update(m, &self.clips, &self.stream_handle, |path, items| {
-                    match &countdown {
+                return timeline.update(
+                    m,
+                    &self.clips,
+                    &self.stream_handle,
+                    self.clip_duration,
+                    |path, items| match &countdown {
                         Some(countdown) => {
                             export::export(path, items, &clips, countdown, *clip_duration)
                         }
                         None => Err("No countdown selected".into()),
-                    }
-                })
+                    },
+                )
             }
             Message::GlobalSettings => {
                 self.modal_state.inner_mut().inner = ModalInnerState::GlobalSettings(

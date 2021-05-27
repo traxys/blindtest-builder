@@ -3,6 +3,7 @@ use std::{
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -10,6 +11,8 @@ pub struct ClipSave {
     pub title: String,
     pub image_path: PathBuf,
     pub music_path: PathBuf,
+    #[serde(default)]
+    pub offset: Duration,
 }
 
 #[derive(Serialize, Deserialize)]
