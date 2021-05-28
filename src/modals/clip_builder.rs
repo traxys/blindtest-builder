@@ -20,7 +20,7 @@ impl From<ClipBuilderMessage> for Message {
     }
 }
 
-async fn select_file(image: bool) -> Option<PathBuf> {
+async fn select_file(image: bool, default_dir: Option<PathBuf>) -> Option<PathBuf> {
     let mut dialog = native_dialog::FileDialog::new();
     if image {
         dialog = dialog
@@ -32,6 +32,10 @@ async fn select_file(image: bool) -> Option<PathBuf> {
             .add_filter("OGG", &["ogg"])
             .add_filter("WAV", &["wav"])
             .add_filter("FLAC", &["flac"]);
+    }
+
+    if let Some(path) = &default_dir {
+        dialog = dialog.set_location(path);
     }
 
     match dialog.show_open_single_file() {
@@ -181,6 +185,8 @@ impl ClipBuilderState {
         &mut self,
         message: ClipBuilderMessage,
         clips: &mut HashMap<String, Clip>,
+        music_dir: &mut Option<PathBuf>,
+        image_dir: &mut Option<PathBuf>,
     ) -> (Command<Message>, bool) {
         match message {
             ClipBuilderMessage::TitleChanged(t) => {
@@ -188,7 +194,7 @@ impl ClipBuilderState {
             }
             ClipBuilderMessage::PickImage => {
                 return (
-                    Command::perform(select_file(true), |p| {
+                    Command::perform(select_file(true, image_dir.clone()), |p| {
                         ClipBuilderMessage::PickedImage(p).into()
                     }),
                     false,
@@ -196,14 +202,30 @@ impl ClipBuilderState {
             }
             ClipBuilderMessage::PickMusic => {
                 return (
-                    Command::perform(select_file(false), |p| {
+                    Command::perform(select_file(false, music_dir.clone()), |p| {
                         ClipBuilderMessage::PickedMusic(p).into()
                     }),
                     false,
-                )
+                );
             }
-            ClipBuilderMessage::PickedImage(img) => self.image = img,
-            ClipBuilderMessage::PickedMusic(msc) => self.music = msc,
+            ClipBuilderMessage::PickedImage(img) => {
+                *image_dir = img
+                    .clone()
+                    .map(|mut p| {
+                        p.pop();
+                        p
+                    });
+                self.image = img
+            }
+            ClipBuilderMessage::PickedMusic(msc) => {
+                *music_dir = msc
+                    .clone()
+                    .map(|mut p| {
+                        p.pop();
+                        p
+                    });
+                self.music = msc;
+            }
             ClipBuilderMessage::Add => match self.build() {
                 Err(err) => {
                     self.error = Some(err.into());

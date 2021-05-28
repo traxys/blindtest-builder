@@ -107,6 +107,9 @@ struct BlindTestBuilder {
     clips: HashMap<String, Clip>,
     timeline: timeline::Timeline,
 
+    music_dir: Option<PathBuf>,
+    image_dir: Option<PathBuf>,
+
     clip_duration: u32,
     countdown: Option<PathBuf>,
 }
@@ -147,6 +150,8 @@ impl BlindTestBuilder {
             clip_duration: 30,
             stream_handle,
             countdown: None,
+            image_dir: None,
+            music_dir: None,
         }
     }
 
@@ -160,7 +165,7 @@ impl BlindTestBuilder {
 
         let (command, close) = match (message, &mut modal_state.inner_mut().inner) {
             (ModalMessage::ClipBuilder(c), ModalInnerState::ClipBuilder(cb)) => {
-                cb.update(c, &mut self.clips)
+                cb.update(c, &mut self.clips, &mut self.music_dir, &mut self.image_dir)
             }
             (ModalMessage::ClipEditor(c), ModalInnerState::ClipEditor(ce)) => {
                 ce.update(c, &self.stream_handle, self.clip_duration, &mut self.clips)
