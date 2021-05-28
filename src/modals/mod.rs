@@ -206,13 +206,18 @@ impl ModalState {
         self.inner = ModalInnerState::None;
     }
 
-    pub(crate) fn view(&mut self, clips: &HashMap<String, Clip>) -> Element<Message> {
+    pub(crate) fn view(
+        &mut self,
+        clips: &HashMap<String, Clip>,
+        clip_duration: u32,
+    ) -> Element<Message> {
         let (title, content, confirm) = match &mut self.inner {
             ModalInnerState::ClipBuilder(c) => c.view(),
             ModalInnerState::ClipEditor(c) => c.view(
                 clips
                     .get(c.clip_name())
                     .expect("clip referencing deleted clip"),
+                clip_duration,
             ),
             ModalInnerState::None => {
                 eprintln!("Error: tried to render empty modal");

@@ -60,11 +60,24 @@ impl Clip {
     }
 
     pub(crate) fn fetch_duration(self) -> Self {
+        let cmd = std::process::Command::new("ffprobe")
+            .arg(&self.music_path)
+            .arg("-v")
+            .arg("quiet")
+            .arg("-show_entries")
+            .arg("format=duration")
+            .arg("-of")
+            .arg("csv=p=0")
+            .output()
+            .expect("ffprobe failed");
+        let dur: f64 = String::from_utf8(cmd.stdout)
+            .expect("ffprobe is utf8")
+            .trim_end()
+            .parse()
+            .expect("ffprobe is not an f64");
+
         Self {
-            duration: Decoder::new(Cursor::new(self.music.as_ref()))
-                .expect("could not load clip")
-                .total_duration()
-                .expect("clip has no duration"),
+            duration: Duration::from_secs_f64(dur),
             ..self
         }
     }
@@ -112,6 +125,7 @@ pub(crate) enum Message {
     LoadFrom(Option<PathBuf>),
     Timeline(timeline::TimelineMessage),
     GlobalSettings,
+    EditClipOffset { clip: String, new_offset: u32 },
 }
 
 impl BlindTestBuilder {
@@ -399,6 +413,12 @@ impl Application for BlindTestBuilder {
                 );
                 self.modal_state.show(true)
             }
+            Message::EditClipOffset { clip, new_offset } => {
+                self.clips
+                    .get_mut(&clip)
+                    .expect("Tried to modify non existent clip")
+                    .offset = Duration::from_secs(new_offset as u64);
+            }
         }
 
         Command::none()
@@ -465,8 +485,9 @@ impl Application for BlindTestBuilder {
         .style(style::Container);
 
         let clips = self.clips.clone();
+        let clip_duration = self.clip_duration;
         Modal::new(&mut self.modal_state, content, move |state| {
-            modals::ModalState::view(state, &clips)
+            modals::ModalState::view(state, &clips, clip_duration)
         })
         .backdrop(Message::ModalClosed)
         .on_esc(Message::ModalClosed)
