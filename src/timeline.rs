@@ -10,7 +10,7 @@ use std::{
     path::PathBuf,
 };
 
-const CLIP_HEIGHT: u32 = 400;
+const CLIP_HEIGHT: u32 = 300;
 
 #[derive(Debug, Clone)]
 pub(crate) enum TimelineMessage {
@@ -230,13 +230,18 @@ impl TimelineClip {
             )
             .push(down);
 
-        Column::new()
-            .push(content)
-            .push(Rule::horizontal(20).style(style::Rule))
-            .push(controls)
-            .spacing(5)
-            .align_items(iced::Align::Center)
-            .into()
+        Container::new(
+            Column::new()
+                .push(content)
+                .push(Space::with_height(Length::Fill))
+                .push(Rule::horizontal(20).style(style::Rule))
+                .push(Space::with_height(Length::Fill))
+                .push(controls)
+                .spacing(5)
+                .align_items(iced::Align::Center),
+        )
+        .center_y()
+        .into()
     }
 }
 
@@ -317,8 +322,14 @@ impl Timeline {
         export: E,
     ) -> Command<Message> {
         match message {
-            TimelineMessage::AddStart => self.clips.push_front(TimelineClip::new(stream_handle)),
-            TimelineMessage::AddEnd => self.clips.push_back(TimelineClip::new(stream_handle)),
+            TimelineMessage::AddStart => {
+                self.scroll_data.scroll_to_percentage(0.);
+                self.clips.push_front(TimelineClip::new(stream_handle))
+            }
+            TimelineMessage::AddEnd => {
+                self.scroll_data.scroll_to_percentage(1.);
+                self.clips.push_back(TimelineClip::new(stream_handle))
+            }
             TimelineMessage::TimelineClip(index, msg) => {
                 let clip = self.clips[index]
                     .clip
@@ -327,8 +338,18 @@ impl Timeline {
                 let (cmd, action) = self.clips[index].update(msg, clip, duration, stream_handle);
                 if let Some(action) = action {
                     match action {
-                        TimelineAction::Up => self.clips.swap(index, index - 1),
-                        TimelineAction::Down => self.clips.swap(index, index + 1),
+                        TimelineAction::Up => {
+                            self.scroll_data.scroll_to_percentage(
+                                (index - 1) as f32 / (self.clips.len() as f32 - 1.0),
+                            );
+                            self.clips.swap(index, index - 1)
+                        }
+                        TimelineAction::Down => {
+                            self.scroll_data.scroll_to_percentage(
+                                (index + 1) as f32 / (self.clips.len() as f32 - 1.0),
+                            );
+                            self.clips.swap(index, index + 1)
+                        }
                         TimelineAction::Delete => {
                             self.clips.remove(index);
                         }
