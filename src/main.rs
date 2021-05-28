@@ -92,7 +92,9 @@ impl Clip {
 
 struct BlindTestBuilder {
     save: button::State,
+    save_as: button::State,
     load: button::State,
+    save_path: Option<PathBuf>,
 
     choose_clip: pick_list::State<String>,
     choosen_clip: Option<String>,
@@ -126,6 +128,7 @@ pub(crate) enum Message {
     SaveTo(Option<PathBuf>),
     LoadRequest,
     LoadFrom(Option<PathBuf>),
+    SaveAs,
     Timeline(timeline::TimelineMessage),
     GlobalSettings,
     EditClipOffset { clip: String, new_offset: u32 },
@@ -152,6 +155,8 @@ impl BlindTestBuilder {
             countdown: None,
             image_dir: None,
             music_dir: None,
+            save_as: Default::default(),
+            save_path: None,
         }
     }
 
@@ -221,8 +226,12 @@ impl BlindTestBuilder {
     }
 }
 
-async fn select_saveload(save: bool) -> Option<PathBuf> {
-    let dialog = native_dialog::FileDialog::new().add_filter("blindtest save", &["bt"]);
+async fn select_saveload(save: bool, base_dir: Option<PathBuf>) -> Option<PathBuf> {
+    let mut dialog = native_dialog::FileDialog::new().add_filter("blindtest save", &["bt"]);
+    if let Some(p) = &base_dir {
+        dialog = dialog.set_location(p);
+    }
+
     let res = if save {
         dialog.show_save_single_file()
     } else {
@@ -382,21 +391,44 @@ impl Application for BlindTestBuilder {
                 );
                 self.modal_state.show(true);
             }
-            Message::SaveRequest => {
-                return Command::perform(select_saveload(true), Message::SaveTo)
+            Message::SaveRequest => match &self.save_path {
+                None => {
+                    return Command::perform(
+                        select_saveload(true, self.save_path.clone()),
+                        Message::SaveTo,
+                    )
+                }
+                Some(path) => {
+                    if let Err(e) = save::store(path, &self.save()) {
+                        eprintln!("Error saving file: {:?}", e);
+                    }
+                }
+            },
+            Message::SaveAs => {
+                return Command::perform(
+                    select_saveload(true, self.save_path.clone()),
+                    Message::SaveTo,
+                )
             }
             Message::SaveTo(Some(path)) => {
-                if let Err(e) = save::store(path, &self.save()) {
+                if let Err(e) = save::store(&path, &self.save()) {
                     eprintln!("Error saving file: {:?}", e);
                 }
+                self.save_path = Some(path);
             }
             Message::LoadRequest => {
-                return Command::perform(select_saveload(false), Message::LoadFrom)
+                return Command::perform(
+                    select_saveload(false, self.save_path.clone()),
+                    Message::LoadFrom,
+                )
             }
-            Message::LoadFrom(Some(path)) => match save::load(path) {
-                Err(e) => eprintln!("Could not load save: {:?}", e),
-                Ok(save) => self.load(save),
-            },
+            Message::LoadFrom(Some(path)) => {
+                match save::load(&path) {
+                    Err(e) => eprintln!("Could not load save: {:?}", e),
+                    Ok(save) => self.load(save),
+                }
+                self.save_path = Some(path);
+            }
             Message::SaveTo(None) | Message::LoadFrom(None) => {}
             Message::Timeline(m) => {
                 return timeline.update(
@@ -472,6 +504,11 @@ impl Application for BlindTestBuilder {
                             Button::new(&mut self.load, Text::new("Load"))
                                 .style(style::Button::Primary)
                                 .on_press(Message::LoadRequest),
+                        )
+                        .push(
+                            Button::new(&mut self.save_as, Text::new("Save As"))
+                                .style(style::Button::Primary)
+                                .on_press(Message::SaveAs),
                         )
                         .push(
                             Button::new(&mut self.save, Text::new("Save"))
