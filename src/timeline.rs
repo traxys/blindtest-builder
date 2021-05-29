@@ -1,7 +1,10 @@
-use crate::{style, Clip, Message};
+use crate::{
+    export::{Export, Progress},
+    style, Clip, Message,
+};
 use iced::{
     button, pick_list, scrollable, Button, Column, Command, Container, Element, Image, Length,
-    PickList, Row, Rule, Scrollable, Space, Text,
+    PickList, ProgressBar, Row, Rule, Scrollable, Space, Subscription, Text,
 };
 use rodio::{OutputStreamHandle, Sink};
 use std::{
@@ -21,6 +24,7 @@ pub(crate) enum TimelineMessage {
     TimelineClip(usize, TimelineClipMessage),
     Save,
     SaveTo(Option<PathBuf>),
+    ExportProgress(crate::export::Progress),
 }
 
 #[derive(Debug, Clone)]
@@ -268,10 +272,44 @@ pub(crate) struct Timeline {
     audio_button: button::State,
     export_button: button::State,
 
+    export: Option<PathBuf>,
+    progress: f32,
+    progress_max: f32,
+
     scroll_data: scrollable::State,
 }
 
 impl Timeline {
+    pub(crate) fn subscription(
+        &self,
+        clips: &HashMap<String, Clip>,
+        countdown: Option<PathBuf>,
+        duration: u32,
+    ) -> Subscription<Message> {
+        match &self.export {
+            Some(path) => {
+                let items: Vec<_> = self
+                    .clips
+                    .iter()
+                    .filter_map(|clip| clip.clip.as_ref())
+                    .map(|s| -> &str { s })
+                    .collect();
+                Subscription::from_recipe(
+                    Export::new(
+                        path.clone(),
+                        &items,
+                        clips,
+                        countdown.expect("Countdown was not provided"),
+                        duration,
+                    )
+                    .expect("Export failed"),
+                )
+                .map(|p| Message::Timeline(TimelineMessage::ExportProgress(p)))
+            }
+            None => Subscription::none(),
+        }
+    }
+
     fn play_all(&self, clips: &HashMap<String, Clip>, duration: u32) {
         for clip in &self.clips {
             if let Some(clip) = &clip.clip {
@@ -310,16 +348,18 @@ impl Timeline {
             export_button: Default::default(),
             sink: Sink::try_new(stream_handle).expect("could not create sink"),
             playing: false,
+            export: None,
+            progress: 0.,
+            progress_max: 0.,
         }
     }
 
-    pub(crate) fn update<E: FnOnce(PathBuf, Vec<&str>) -> Result<(), String>>(
+    pub(crate) fn update(
         &mut self,
         message: TimelineMessage,
         clips: &HashMap<String, Clip>,
         stream_handle: &OutputStreamHandle,
         duration: u32,
-        export: E,
     ) -> Command<Message> {
         match message {
             TimelineMessage::AddStart => {
@@ -371,19 +411,15 @@ impl Timeline {
                 })
             }
             TimelineMessage::SaveTo(path) => {
-                if let Some(path) = path {
-                    if let Err(e) = export(
-                        path,
-                        self.clips
-                            .iter()
-                            .filter_map(|clip| clip.clip.as_ref())
-                            .map(|s| -> &str { s })
-                            .collect(),
-                    ) {
-                        eprintln!("Error exporting: {:?}", e);
-                    }
-                }
+                self.export = path;
+                self.progress_max = (25 * duration as usize * self.clips.len()) as f32;
             }
+            TimelineMessage::ExportProgress(p) => match p {
+                Progress::Started => {}
+                Progress::Frame(f) => self.progress = f as _,
+                Progress::Done => self.export = None,
+                Progress::Error(e) => println!("Error in export: {}", e),
+            },
         }
 
         Command::none()
@@ -425,7 +461,24 @@ impl Timeline {
             TimelineMessage::Play.into()
         });
 
-        Column::new()
+        let mut export_button =
+            Button::new(&mut self.export_button, Text::new("Export")).style(style::Button::Primary);
+        if self.export.is_none() {
+            export_button = export_button.on_press(TimelineMessage::Save.into());
+        }
+
+        let mut column = Column::new();
+        if self.export.is_some() {
+            column = column
+                .push(Space::with_width(Length::FillPortion(1)))
+                .push(
+                    ProgressBar::new(0.0..=self.progress_max, self.progress)
+                        .width(Length::FillPortion(1)),
+                )
+                .push(Space::with_width(Length::FillPortion(1)));
+        }
+
+        column = column
             .push(
                 Row::new()
                     .spacing(10)
@@ -436,11 +489,7 @@ impl Timeline {
                             .on_press(TimelineMessage::AddStart.into()),
                     )
                     .push(audio_button)
-                    .push(
-                        Button::new(&mut self.export_button, Text::new("Export"))
-                            .style(style::Button::Primary)
-                            .on_press(TimelineMessage::Save.into()),
-                    ),
+                    .push(export_button),
             )
             .push(scrollable)
             .push(
@@ -449,6 +498,8 @@ impl Timeline {
                     .on_press(TimelineMessage::AddEnd.into()),
             )
             .align_items(iced::Align::Center)
-            .into()
+            .spacing(10);
+
+        column.into()
     }
 }

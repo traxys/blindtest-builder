@@ -319,6 +319,11 @@ impl Application for BlindTestBuilder {
         (Self::new(), Command::none())
     }
 
+    fn subscription(&self) -> Subscription<Self::Message> {
+        self.timeline
+            .subscription(&self.clips, self.countdown.clone(), self.clip_duration)
+    }
+
     fn run(settings: Settings<Self::Flags>) -> iced::Result {
         let renderer_settings = crate::renderer::Settings {
             default_font: settings.default_font,
@@ -356,14 +361,6 @@ impl Application for BlindTestBuilder {
     }
 
     fn update(&mut self, message: Self::Message, _: &mut Clipboard) -> Command<Self::Message> {
-        let Self {
-            ref mut timeline,
-            ref countdown,
-            ref clips,
-            ref clip_duration,
-            ..
-        } = self;
-
         match message {
             Message::AddClip => {
                 self.modal_state.inner_mut().inner =
@@ -431,18 +428,12 @@ impl Application for BlindTestBuilder {
             }
             Message::SaveTo(None) | Message::LoadFrom(None) => {}
             Message::Timeline(m) => {
-                return timeline.update(
+                return self.timeline.update(
                     m,
                     &self.clips,
                     &self.stream_handle,
                     self.clip_duration,
-                    |path, items| match &countdown {
-                        Some(countdown) => {
-                            export::export(path, items, &clips, countdown, *clip_duration)
-                        }
-                        None => Err("No countdown selected".into()),
-                    },
-                )
+                );
             }
             Message::GlobalSettings => {
                 self.modal_state.inner_mut().inner = ModalInnerState::GlobalSettings(
