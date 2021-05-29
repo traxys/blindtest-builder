@@ -170,7 +170,6 @@ where
                                     }
                                 },
                                 "progress" if value == "end" => {
-                                    println!("DONE");
                                     return Some((Progress::Done, State::Finished))
                                 }
                                 _ => continue,

@@ -469,13 +469,15 @@ impl Timeline {
 
         let mut column = Column::new();
         if self.export.is_some() {
-            column = column
-                .push(Space::with_width(Length::FillPortion(1)))
-                .push(
-                    ProgressBar::new(0.0..=self.progress_max, self.progress)
-                        .width(Length::FillPortion(1)),
-                )
-                .push(Space::with_width(Length::FillPortion(1)));
+            column = column.push(
+                Row::new()
+                    .push(Space::with_width(Length::FillPortion(1)))
+                    .push(
+                        ProgressBar::new(0.0..=self.progress_max, self.progress)
+                            .width(Length::FillPortion(1)),
+                    )
+                    .push(Space::with_width(Length::FillPortion(1))),
+            )
         }
 
         column = column
