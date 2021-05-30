@@ -31,7 +31,8 @@ fn archive_save<I: AsRef<Path>, O: AsRef<Path>>(input: I, output: O) -> color_ey
     let mut tar = tar::Builder::new(File::create(output).wrap_err("could not create output file")?);
 
     for clip in &mut save.clips {
-        let path = PathBuf::from(&clip.title);
+        let mut path = PathBuf::from("clips");
+        path.push(&clip.title);
 
         let mut new_music = path.clone();
         new_music.push("music");
