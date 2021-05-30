@@ -32,7 +32,7 @@ The save file is a json file of the following schema:
 		"music_path": "/path/to/file.music",
 		"offset": {"secs": 0, "nanos": 0}
 	}],
-	timeline: [null, "some title"],
+	"timeline": [null, "some title"],
 	"settings": {
 		"duration": 0,
 		"countdown": "/some/path/or/null",
