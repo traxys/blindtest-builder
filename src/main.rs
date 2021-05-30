@@ -419,8 +419,6 @@ impl Application for BlindTestBuilder {
                 )
             }
             Message::LoadFrom(Some(path)) => {
-                std::env::set_current_dir(path.parent().unwrap())
-                    .expect("could not change current dir");
                 match bt_save::load(&path) {
                     Err(e) => eprintln!("Could not load save: {:?}", e),
                     Ok(save) => self.load(save),
