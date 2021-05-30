@@ -1,10 +1,9 @@
+use bt_export::{clip_duration_command, ffmpeg_command};
 use iced_futures::futures;
 use std::{
     collections::HashMap,
-    ffi::OsString,
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
-    process::Stdio,
     time::Duration,
 };
 use tokio::{
@@ -13,19 +12,6 @@ use tokio::{
 };
 
 use crate::Clip;
-
-fn fade_scale_stream(input: usize, output: usize, duration: u32) -> String {
-    format!("[{}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fade=t=out:st={}:d=1[v{}]",input, duration - 1, output)
-}
-
-fn fade_audio_stream(input: usize, output: usize, duration: u32) -> String {
-    format!(
-        "[{}:a]afade=t=out:st={}:d=1[a{}]",
-        input,
-        duration - 1,
-        output
-    )
-}
 
 #[derive(Clone)]
 pub(crate) struct Export {
@@ -124,13 +110,18 @@ where
 
                         eprintln!("Started ffmpeg");
 
-                        let stdout = BufReader::new(err_prop!(ffmpeg_command(
+                        let mut ffmpeg_cmd = Command::from(ffmpeg_command(
                             export.duration,
                             countdown_duration,
                             &export.countdown,
                             &export.items,
-                            &export.output
-                        )));
+                            &export.output,
+                        ));
+                        let child = err_prop!(ffmpeg_cmd
+                            .spawn()
+                            .map_err(|err| format!("error launching ffmpeg: {}", err)));
+
+                        let stdout = BufReader::new(child.stdout.unwrap());
 
                         Some((Progress::Started, State::Exporting { stdout }))
                     }
@@ -183,91 +174,9 @@ where
     }
 }
 
-fn ffmpeg_command(
-    clip_duration: u32,
-    countdown_duration: u32,
-    countdown: &Path,
-    items: &[(Duration, PathBuf, PathBuf)],
-    output: &Path,
-) -> Result<ChildStdout, String> {
-    let loop_dur = clip_duration - countdown_duration;
-    let looping_duration: OsString = loop_dur.to_string().into();
-    let clip_duration_str: OsString = clip_duration.to_string().into();
-
-    let mut ffmpeg = Command::new("ffmpeg");
-    ffmpeg.arg("-i").arg(countdown);
-
-    let mut filter = String::new();
-
-    for (index, (offset, music_path, image_path)) in items.iter().enumerate() {
-        ffmpeg
-            .arg("-loop")
-            .arg("1")
-            .arg("-t")
-            .arg(&looping_duration)
-            .arg("-i")
-            .arg(image_path)
-            .arg("-ss")
-            .arg(offset.as_secs().to_string())
-            .arg("-t")
-            .arg(&clip_duration_str)
-            .arg("-i")
-            .arg(music_path);
-
-        filter += &fade_scale_stream(0, 2 * index, countdown_duration);
-        filter += ";";
-        filter += &fade_scale_stream(2 * index + 1, 2 * index + 1, loop_dur);
-        filter += ";";
-        filter += &fade_audio_stream((index + 1) * 2, index, clip_duration);
-        filter += ";";
-    }
-
-    let video_streams: String = (0..items.len() * 2).map(|i| format!("[v{}]", i)).collect();
-    filter += &video_streams;
-    filter += &format!("concat=n={}:v=1:a=0[v];", items.len() * 2);
-
-    let audio_streams: String = (0..items.len()).map(|i| format!("[a{}]", i)).collect();
-    filter += &audio_streams;
-    filter += &format!("concat=n={}:v=0:a=1[a]", items.len());
-
-    ffmpeg
-        .arg("-filter_complex")
-        .arg(&filter)
-        .arg("-map")
-        .arg("[v]")
-        .arg("-map")
-        .arg("[a]")
-        .arg("-v")
-        .arg("error")
-        .arg("-progress")
-        .arg("-")
-        .arg("-shortest")
-        .arg("-y")
-        .arg(output);
-
-    let child = ffmpeg
-        .stdout(Stdio::piped())
-        .spawn()
-        .map_err(|err| format!("ffmpeg error: {}", err))?;
-
-    Ok(child.stdout.unwrap())
-}
-
 async fn video_duration(countdown: &Path) -> Result<u32, String> {
-    let countdown_command = Command::new("ffprobe")
-        .arg("-i")
-        .arg(countdown)
-        .args(vec![
-            "-show_entries",
-            "format=duration",
-            "-v",
-            "quiet",
-            "-of",
-            "csv=p=0",
-        ])
-        .output()
-        .await
-        .map_err(|err| err.to_string())?;
+    let mut cmd = Command::from(clip_duration_command(countdown));
+    let countdown_command = cmd.output().await.map_err(|err| err.to_string())?;
 
     let countdown_duration: f32 = String::from_utf8(countdown_command.stdout)
         .expect("ffprobe should give utf8")

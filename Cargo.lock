@@ -196,6 +196,7 @@ name = "blindtest-builder"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bt-export",
  "bt-save",
  "iced",
  "iced_aw",
@@ -222,6 +223,13 @@ dependencies = [
  "color-eyre",
  "structopt",
  "tar",
+]
+
+[[package]]
+name = "bt-export"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
 ]
 
 [[package]]

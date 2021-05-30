@@ -23,6 +23,7 @@ native-dialog = "0.5.5"
 rodio = "0.14.0"
 tokio = { version = "1.6.1", features = ["process", "io-util"] }
 bt-save = {path = "bt-save"}
+bt-export = {path = "bt-export"}
 
 [patch.crates-io]
 iced = { git = "https://github.com/traxys/iced", branch = "bt" }
