@@ -8,7 +8,9 @@ edition = "2018"
 [workspace]
 members = [
 	"bt-save",
-	"bt-archive"
+	"bt-archive",
+	"bt-export",
+	"bt-export-cli",
 ]
 
 [dependencies]
