@@ -15,6 +15,8 @@ struct Args {
     save_file: PathBuf,
     #[structopt(long = "output", short = "-o", default_value = "output.mp4")]
     output: PathBuf,
+    #[structopt(long = "threads", short = "-t")]
+    threads: Option<u64>,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -71,6 +73,9 @@ fn main() -> color_eyre::Result<()> {
         &items,
         &args.output,
     );
+    if let Some(threads) = args.threads {
+        ffmpeg_cmd.arg("-threads").arg(threads.to_string());
+    }
 
     let output = BufReader::new(
         ffmpeg_cmd
@@ -85,7 +90,7 @@ fn main() -> color_eyre::Result<()> {
     );
     progress_bar.set_style(
         ProgressStyle::default_bar()
-            .template("[elasped:{elapsed_precise} eta:{eta_precise}] {wide_bar} {pos:>7}/{len:7}")
+            .template("[elasped:{elapsed_precise} eta:{eta_precise}] {wide_bar} {pos:>7}/{len:7}"),
     );
 
     for line in output.lines() {
