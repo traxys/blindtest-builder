@@ -5,7 +5,6 @@ use std::{
     ffi::OsString,
     fs::File,
     io::BufReader,
-    mem,
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
@@ -59,6 +58,19 @@ fn archive_save<I: AsRef<Path>, O: AsRef<Path>>(input: I, output: O) -> color_ey
         clip.image_path = new_image;
     }
 
+    if let Some(countdown) = &mut save.settings.countdown {
+        let mut countdown_path = PathBuf::from("countdown");
+        countdown_path.push(
+            countdown
+                .file_name()
+                .ok_or(eyre!("countdown is not a file"))?,
+        );
+
+        tar.append_path_with_name(countdown, &countdown_path)
+            .wrap_err("could not add countdown to archive")?;
+        *countdown = countdown_path;
+    }
+
     let (len, save_file) = save.data().wrap_err("could not generate edited save")?;
     let mut header = Header::new_gnu();
     header.set_cksum();
@@ -86,12 +98,18 @@ fn load_archive<I: AsRef<Path>, O: AsRef<Path>>(input: I, output: O) -> color_ey
         .wrap_err("could not canonicalize path")?;
     for clip in &mut save_file.clips {
         let mut music_path = base_path.clone();
-        music_path.push(mem::take(&mut clip.music_path));
+        music_path.push(&clip.music_path);
         clip.music_path = music_path;
 
         let mut image_path = base_path.clone();
-        image_path.push(mem::take(&mut clip.image_path));
+        image_path.push(&clip.image_path);
         clip.image_path = image_path;
+    }
+
+    if let Some(countdown) = &mut save_file.settings.countdown {
+        let mut countdown_path = base_path.clone();
+        countdown_path.push(&countdown);
+        *countdown = countdown_path;
     }
 
     save_file.store(&path)?;
