@@ -5,6 +5,12 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [
+	"bt-save",
+	"bt-archive"
+]
+
 [dependencies]
 anyhow = "1.0.40"
 iced = { version = "0.3.0", features = ["image", "tokio"] }
@@ -15,9 +21,8 @@ iced_wgpu = "0.4.0"
 iced_winit = "0.3.0"
 native-dialog = "0.5.5"
 rodio = "0.14.0"
-serde = { version = "1.0.126", features = ["derive"] }
-serde_json = "1.0.64"
 tokio = { version = "1.6.1", features = ["process", "io-util"] }
+bt-save = {path = "bt-save"}
 
 [patch.crates-io]
 iced = { git = "https://github.com/traxys/iced", branch = "bt" }

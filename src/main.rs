@@ -11,7 +11,6 @@ use std::{
 
 mod export;
 mod modals;
-mod save;
 mod timeline;
 
 type SoundSample = Box<[u8]>;
@@ -35,8 +34,8 @@ pub(crate) struct Clip {
 }
 
 impl Clip {
-    fn save(&self) -> save::ClipSave {
-        save::ClipSave {
+    fn save(&self) -> bt_save::ClipSave {
+        bt_save::ClipSave {
             title: self.title.clone(),
             music_path: self.music_path.clone(),
             image_path: self.image_path.clone(),
@@ -44,7 +43,7 @@ impl Clip {
         }
     }
 
-    fn load(clip: save::ClipSave) -> anyhow::Result<Self> {
+    fn load(clip: bt_save::ClipSave) -> anyhow::Result<Self> {
         let music = Arc::new(std::fs::read(&clip.music_path)?.into_boxed_slice());
 
         Ok(Clip {
@@ -194,18 +193,18 @@ impl BlindTestBuilder {
         command
     }
 
-    fn save(&self) -> save::SaveFile {
-        save::SaveFile {
+    fn save(&self) -> bt_save::SaveFile {
+        bt_save::SaveFile {
             clips: self.clips.values().map(Clip::save).collect(),
             timeline: self.timeline.save(),
-            settings: save::Settings {
+            settings: bt_save::Settings {
                 duration: self.clip_duration,
                 countdown: self.countdown.clone(),
             },
         }
     }
 
-    fn load(&mut self, save: save::SaveFile) {
+    fn load(&mut self, save: bt_save::SaveFile) {
         self.clips.clear();
         self.choosen_clip = None;
         for clip in save.clips {
@@ -396,7 +395,7 @@ impl Application for BlindTestBuilder {
                     )
                 }
                 Some(path) => {
-                    if let Err(e) = save::store(path, &self.save()) {
+                    if let Err(e) = bt_save::store(path, &self.save()) {
                         eprintln!("Error saving file: {:?}", e);
                     }
                 }
@@ -408,7 +407,7 @@ impl Application for BlindTestBuilder {
                 )
             }
             Message::SaveTo(Some(path)) => {
-                if let Err(e) = save::store(&path, &self.save()) {
+                if let Err(e) = bt_save::store(&path, &self.save()) {
                     eprintln!("Error saving file: {:?}", e);
                 }
                 self.save_path = Some(path);
@@ -420,7 +419,9 @@ impl Application for BlindTestBuilder {
                 )
             }
             Message::LoadFrom(Some(path)) => {
-                match save::load(&path) {
+                std::env::set_current_dir(path.parent().unwrap())
+                    .expect("could not change current dir");
+                match bt_save::load(&path) {
                     Err(e) => eprintln!("Could not load save: {:?}", e),
                     Ok(save) => self.load(save),
                 }
