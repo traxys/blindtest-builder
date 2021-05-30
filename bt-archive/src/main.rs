@@ -66,7 +66,7 @@ fn archive_save<I: AsRef<Path>, O: AsRef<Path>>(input: I, output: O) -> color_ey
                 .ok_or(eyre!("countdown is not a file"))?,
         );
 
-        tar.append_path_with_name(countdown, &countdown_path)
+        tar.append_path_with_name(&countdown, &countdown_path)
             .wrap_err("could not add countdown to archive")?;
         *countdown = countdown_path;
     }
