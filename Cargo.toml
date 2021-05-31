@@ -28,6 +28,7 @@ bt-save = {path = "bt-save"}
 bt-export = {path = "bt-export"}
 itertools = "0.10.0"
 lexical-sort = "0.3.1"
+humantime = "2.1.0"
 
 [patch.crates-io]
 iced = { git = "https://github.com/traxys/iced", branch = "bt" }

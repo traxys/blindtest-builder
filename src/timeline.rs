@@ -12,6 +12,7 @@ use std::{
     collections::{HashMap, VecDeque},
     iter::FromIterator,
     path::PathBuf,
+    time::Duration,
 };
 
 const CLIP_HEIGHT: u32 = 300;
@@ -431,7 +432,11 @@ impl Timeline {
         Command::none()
     }
 
-    pub(crate) fn view(&mut self, clips: &HashMap<String, Clip>) -> Element<Message> {
+    pub(crate) fn view(
+        &mut self,
+        clips: &HashMap<String, Clip>,
+        clip_duration: u32,
+    ) -> Element<Message> {
         let mut scrollable = Scrollable::new(&mut self.scroll_data)
             .align_items(iced::Align::Center)
             .width(iced::Length::Fill)
@@ -474,6 +479,14 @@ impl Timeline {
         }
 
         let mut column = Column::new();
+        if len > 0 {
+            column = column.push(Text::new(format!(
+                "Total duration: {}",
+                humantime::format_duration(Duration::from_secs(
+                    (len * (clip_duration as usize)) as u64
+                ))
+            )));
+        }
         if self.export.is_some() {
             column = column.push(
                 Row::new()

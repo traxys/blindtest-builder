@@ -511,7 +511,7 @@ impl Application for BlindTestBuilder {
                         .align_items(iced::Align::Center),
                 )
                 .push(Rule::horizontal(20).style(style::Rule))
-                .push(self.timeline.view(&self.clips))
+                .push(self.timeline.view(&self.clips, self.clip_duration))
                 .align_items(iced::Align::Center),
         )
         .padding(5)
