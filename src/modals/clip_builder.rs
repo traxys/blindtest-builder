@@ -24,14 +24,13 @@ async fn select_file(image: bool, default_dir: Option<PathBuf>) -> Option<PathBu
     let mut dialog = native_dialog::FileDialog::new();
     if image {
         dialog = dialog
-            .add_filter("JPEG", &["jpg", "jpeg"])
+            .add_filter(
+                "Image file",
+                &["jpg", "jpeg", "png", "PNG", "JPG", "JPEG", "webp", "bmp"],
+            )
             .add_filter("PNG", &["png"]);
     } else {
-        dialog = dialog
-            .add_filter("MP3", &["mp3"])
-            .add_filter("OGG", &["ogg"])
-            .add_filter("WAV", &["wav"])
-            .add_filter("FLAC", &["flac"]);
+        dialog = dialog.add_filter("Audio File", &["mp3", "ogg", "wav", "flac"]);
     }
 
     if let Some(path) = &default_dir {
@@ -209,21 +208,17 @@ impl ClipBuilderState {
                 );
             }
             ClipBuilderMessage::PickedImage(img) => {
-                *image_dir = img
-                    .clone()
-                    .map(|mut p| {
-                        p.pop();
-                        p
-                    });
+                *image_dir = img.clone().map(|mut p| {
+                    p.pop();
+                    p
+                });
                 self.image = img
             }
             ClipBuilderMessage::PickedMusic(msc) => {
-                *music_dir = msc
-                    .clone()
-                    .map(|mut p| {
-                        p.pop();
-                        p
-                    });
+                *music_dir = msc.clone().map(|mut p| {
+                    p.pop();
+                    p
+                });
                 self.music = msc;
             }
             ClipBuilderMessage::Add => match self.build() {
