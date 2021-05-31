@@ -6,6 +6,7 @@ use iced::{
     button, pick_list, scrollable, Button, Column, Command, Container, Element, Image, Length,
     PickList, ProgressBar, Row, Rule, Scrollable, Space, Subscription, Text,
 };
+use itertools::Itertools;
 use rodio::{OutputStreamHandle, Sink};
 use std::{
     collections::{HashMap, VecDeque},
@@ -189,7 +190,12 @@ impl TimelineClip {
                     Row::new()
                         .push(PickList::new(
                             &mut self.clip_select,
-                            Vec::from_iter(clips.keys().cloned()),
+                            Vec::from_iter(
+                                clips
+                                    .keys()
+                                    .cloned()
+                                    .sorted_by(|a, b| lexical_sort::natural_lexical_cmp(a, b)),
+                            ),
                             self.selected.clone(),
                             move |c| timeline_clip_msg(index, TimelineClipMessage::SelectedClip(c)),
                         ))

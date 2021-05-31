@@ -3,6 +3,7 @@ use iced::{
     Command, Container, Element, Length, PickList, Row, Rule, Settings, Space, Subscription, Text,
 };
 use iced_aw::{modal, Modal};
+use itertools::Itertools;
 use modals::{ModalInnerState, ModalMessage};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Source};
 use std::{
@@ -473,7 +474,9 @@ impl Application for BlindTestBuilder {
                                 Row::new()
                                     .push(PickList::new(
                                         &mut self.choose_clip,
-                                        Vec::from_iter(self.clips.keys().cloned()),
+                                        Vec::from_iter(self.clips.keys().cloned().sorted_by(
+                                            |a, b| lexical_sort::natural_lexical_cmp(a, b),
+                                        )),
                                         self.choosen_clip.clone(),
                                         Message::PickedClip,
                                     ))
