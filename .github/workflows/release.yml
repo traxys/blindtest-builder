@@ -1,0 +1,29 @@
+name: Release
+
+env:
+  CARGO_TERM_COLOR: always
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - run: sudo apt install -y alsa alsa-tools libasound2-dev
+      - name: Build (linux)
+        run: cargo build --release --workspace
+      - name: Package (linux)
+        run: tar cvzf blindtest-builder-linux.tgz --transform='s/target\/release/blindtest-builder/' target/release/blindtest-builder target/release/bt-archive target/release/bt-export-cli
+      - name: Build (windows)
+        run: cargo build --release --workspace --target x86_64-pc-windows-gnu
+      - name: Package (windows)
+        run: mkdir blindtest-builder && mv target/x86_64-pc-windows-gnu/release/{blindtest-builder.exe,bt-archive.exe,bt-export-cli.exe} blindtest-builder && zip -r blindtest-builder-windows.zip blindtest-builder
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
