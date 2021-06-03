@@ -25,5 +25,9 @@ jobs:
         run: mkdir blindtest-builder && mv target/x86_64-pc-windows-gnu/release/{blindtest-builder.exe,bt-archive.exe,bt-export-cli.exe} blindtest-builder && zip -r blindtest-builder-windows.zip blindtest-builder
       - name: Release
         uses: softprops/action-gh-release@v1
+        with:
+          files: 
+            - blindtest-builder-windows.zip
+            - blindtest-builder-linux.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
