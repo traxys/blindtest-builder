@@ -26,8 +26,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: 
-            - blindtest-builder-windows.zip
-            - blindtest-builder-linux.tgz
+          files: |
+            blindtest-builder-windows.zip 
+            blindtest-builder-linux.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
